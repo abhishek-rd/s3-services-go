@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"io/ioutil"
 	"encoding/json"
 )
 
@@ -14,8 +13,8 @@ func main() {
 	router := gin.Default()
 
 	router.GET("/get-json", func(c *gin.Context) {
-		bucket := "your_bucket_name"
-		key := "your_file_key.json"
+		bucket := "stt-test-framework-dev"
+		key := "suites.json"
 
 		// Create a session
 		sess, err := session.NewSession(&aws.Config{
