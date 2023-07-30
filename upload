@@ -1,0 +1,66 @@
+package main
+
+import (
+	"bytes"
+	"github.com/gin-gonic/gin"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+)
+
+func main() {
+	router := gin.Default()
+
+	router.POST("/upload", func(c *gin.Context) {
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(500, gin.H{"error": "No file is received!"})
+			return
+		}
+
+		// Read the file into a byte array
+		f, err := file.Open()
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		defer f.Close()
+		content := bytes.Buffer{}
+		_, err = content.ReadFrom(f)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		bucket := "your_bucket_name"
+		key := file.Filename
+
+		// Create a session
+		sess, err := session.NewSession(&aws.Config{
+			Region: aws.String("us-west-2")},
+		)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to create session," + err.Error()})
+			return
+		}
+
+		// Create an uploader with the session and default options
+		uploader := s3manager.NewUploader(sess)
+
+		// Upload the file to S3
+		_, err = uploader.Upload(&s3manager.UploadInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+			Body:   bytes.NewReader(content.Bytes()),
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to upload file," + err.Error()})
+			return
+		}
+
+		// Return success message
+		c.JSON(200, gin.H{"message": "Successfully uploaded file!"})
+	})
+
+	router.Run() // listen and serve on 0.0.0.0:8080
+}
