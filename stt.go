@@ -13,6 +13,14 @@ import (
     "nuance.com/asr/v1"
 )
 
+const (
+    // Nuance server URL.
+    serverURL = "localhost:50051"
+
+    // AUTH URL.
+    authURL = "https://auth.crt.nuance.com/oauth2/token"
+)
+
 func main() {
     // Load the username and password from the JSON file.
     file, err := os.Open("credentials.json")
@@ -27,7 +35,7 @@ func main() {
     }
 
     // Create a new gRPC client.
-    conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+    conn, err := grpc.Dial(serverURL, grpc.WithInsecure())
     if err != nil {
         log.Fatal(err)
     }
@@ -41,7 +49,7 @@ func main() {
     defer cancel()
 
     // Get the access token.
-    token, err := getAccessToken(ctx, client, credentials["username"], credentials["password"])
+    token, err := getAccessToken(ctx, client, credentials["username"], credentials["password"], authURL)
     if err != nil {
         log.Fatal(err)
     }
@@ -57,7 +65,7 @@ func main() {
     transcribe(ctx, client, token, file)
 }
 
-func getAccessToken(ctx context.Context, client asr.RecognizerClient, username, password string) (string, error) {
+func getAccessToken(ctx context.Context, client asr.RecognizerClient, username, password, authURL string) (string, error) {
     // Create a new authentication request.
     request := &asr.AuthenticateRequest{
         Username: username,
