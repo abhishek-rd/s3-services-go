@@ -16,3 +16,8 @@ recognizer.proto:14:1: Import "nuance/asr/v1/result.proto" was not found or had 
 recognizer.proto:43:12: "RecognitionResource" is not defined.
 recognizer.proto:56:3: "EnumResultType" is not defined.
 recognizer.proto:170:5: "Result" is not defined.
+
+
+nuance/rpc/error_details.proto: File not found.
+result.proto:13:1: Import "nuance/rpc/error_details.proto" was not found or had errors.
+result.proto:121:3: "nuance.rpc.LocalizedMessage" is not defined.
