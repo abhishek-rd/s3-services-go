@@ -1,0 +1,18 @@
+nuance/asr/v1/resource.proto: File not found.
+nuance/asr/v1/result.proto: File not found.
+recognizer.proto:13:1: Import "nuance/asr/v1/resource.proto" was not found or had errors.
+recognizer.proto:14:1: Import "nuance/asr/v1/result.proto" was not found or had errors.
+recognizer.proto:43:12: "RecognitionResource" is not defined.
+recognizer.proto:56:3: "EnumResultType" is not defined.
+recognizer.proto:170:5: "Result" is not defined
+
+
+
+adeshmukh1@us147dda751a86 v1 % protoc --go_out=. *.proto
+nuance/asr/v1/resource.proto: File not found.
+nuance/asr/v1/result.proto: File not found.
+recognizer.proto:13:1: Import "nuance/asr/v1/resource.proto" was not found or had errors.
+recognizer.proto:14:1: Import "nuance/asr/v1/result.proto" was not found or had errors.
+recognizer.proto:43:12: "RecognitionResource" is not defined.
+recognizer.proto:56:3: "EnumResultType" is not defined.
+recognizer.proto:170:5: "Result" is not defined.
