@@ -21,3 +21,6 @@ recognizer.proto:170:5: "Result" is not defined.
 nuance/rpc/error_details.proto: File not found.
 result.proto:13:1: Import "nuance/rpc/error_details.proto" was not found or had errors.
 result.proto:121:3: "nuance.rpc.LocalizedMessage" is not defined.
+
+
+c.MultipartForm.File undefined (type func() (*multipart.Form, error) has no field or method File)
