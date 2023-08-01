@@ -15,7 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 	"mime/multipart"
-	"strings"
+	"os"
 )
 
 type Test struct {
@@ -68,7 +68,7 @@ func uploadAndTranscribe(csvFile *multipart.FileHeader, oggFiles map[string][]*m
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String("Your_BUCKET_NAME"),
 		Key:    aws.String(csvFile.Filename),
-		Body:   io.Reader(csvF),
+		Body:   csvF,
 	})
 
 	if err != nil {
@@ -86,14 +86,14 @@ func uploadAndTranscribe(csvFile *multipart.FileHeader, oggFiles map[string][]*m
 			_, err = uploader.Upload(&s3manager.UploadInput{
 				Bucket: aws.String("Your_BUCKET_NAME"),
 				Key:    aws.String(file.Filename),
-				Body:   io.Reader(oggF),
+				Body:   oggF,
 			})
 
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			transcription := transcribeAudio(oggF)
+			transcription := transcribeAudio(file.Filename)
 			updateTestsInMemory(file.Filename, transcription)
 		}
 	}
@@ -140,7 +140,7 @@ func saveTestsToFile(jsonFileName string) {
 	}
 }
 
-func transcribeAudio(audioFile io.Reader) string {
+func transcribeAudio(filename string) string {
 	sess := session.Must(session.NewSession())
 	client := transcribestreamingservice.New(sess, aws.NewConfig().WithRegion("us-west-2"))
 	lc := "en-US"
@@ -157,6 +157,12 @@ func transcribeAudio(audioFile io.Reader) string {
 
 	stream := resp.GetStream()
 	defer stream.Close()
+
+	audioFile, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("failed to open audio file, %v", err)
+	}
+	defer audioFile.Close()
 
 	transcribestreamingservice.StreamAudioFromReader(context.Background(), stream.Writer, 10*1024, audioFile)
 
