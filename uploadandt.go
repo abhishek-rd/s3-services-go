@@ -39,7 +39,7 @@ func main() {
 		csvFile, _ := c.FormFile("csv")
 		oggFiles := form.File["oggFiles"]
 
-		uploadAndTranscribe(csvFile, oggFiles)
+		uploadAndTranscribe(c, csvFile, oggFiles)
 
 		c.JSON(200, gin.H{
 			"message": "Files uploaded to S3 and transcribed",
@@ -49,7 +49,7 @@ func main() {
 	r.Run()
 }
 
-func uploadAndTranscribe(csvFile *multipart.FileHeader, oggFiles map[string][]*multipart.FileHeader) {
+func uploadAndTranscribe(c *gin.Context, csvFile *multipart.FileHeader, oggFiles []*multipart.FileHeader) {
 	s, err := session.NewSession(&aws.Config{
 		Region:      aws.String("REGION"),
 		Credentials: credentials.NewStaticCredentials("Your_AWS_ACCESS_KEY", "Your_AWS_SECRET_KEY", ""),
@@ -62,7 +62,7 @@ func uploadAndTranscribe(csvFile *multipart.FileHeader, oggFiles map[string][]*m
 	uploader := s3manager.NewUploader(s)
 
 	// Upload and parse CSV
-	csvF, _ := csvFile.Open()
+	csvF, _ := c.SaveUploadedFile(csvFile, csvFile.Filename)
 	defer csvF.Close()
 
 	_, err = uploader.Upload(&s3manager.UploadInput{
@@ -78,24 +78,22 @@ func uploadAndTranscribe(csvFile *multipart.FileHeader, oggFiles map[string][]*m
 	parseCSVToMemory(csvF)
 
 	// Upload and transcribe OGG files
-	for _, files := range oggFiles {
-		for _, file := range files {
-			oggF, _ := file.Open()
-			defer oggF.Close()
+	for _, file := range oggFiles {
+		oggF, _ := c.SaveUploadedFile(file, file.Filename)
+		defer oggF.Close()
 
-			_, err = uploader.Upload(&s3manager.UploadInput{
-				Bucket: aws.String("Your_BUCKET_NAME"),
-				Key:    aws.String(file.Filename),
-				Body:   oggF,
-			})
+		_, err = uploader.Upload(&s3manager.UploadInput{
+			Bucket: aws.String("Your_BUCKET_NAME"),
+			Key:    aws.String(file.Filename),
+			Body:   oggF,
+		})
 
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			transcription := transcribeAudio(file.Filename)
-			updateTestsInMemory(file.Filename, transcription)
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		transcription := transcribeAudio(file.Filename)
+		updateTestsInMemory(file.Filename, transcription)
 	}
 
 	saveTestsToFile("output.json")
