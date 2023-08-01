@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/aws-sdk-go/service/transcribestreamingservice"
@@ -29,6 +28,7 @@ type Tests struct {
 }
 
 var tests Tests
+var bucket = "Your_BUCKET_NAME"  // replace with your bucket name
 
 func main() {
 	r := gin.Default()
@@ -52,7 +52,6 @@ func main() {
 func uploadAndTranscribe(c *gin.Context, csvFile *multipart.FileHeader, oggFiles []*multipart.FileHeader) {
 	s, err := session.NewSession(&aws.Config{
 		Region:      aws.String("REGION"),
-		Credentials: credentials.NewStaticCredentials("Your_AWS_ACCESS_KEY", "Your_AWS_SECRET_KEY", ""),
 	})
 
 	if err != nil {
@@ -62,30 +61,31 @@ func uploadAndTranscribe(c *gin.Context, csvFile *multipart.FileHeader, oggFiles
 	uploader := s3manager.NewUploader(s)
 
 	// Upload and parse CSV
-	csvF, _ := c.SaveUploadedFile(csvFile, csvFile.Filename)
-	defer csvF.Close()
+	src, _ := csvFile.Open()
+	defer src.Close()
+
+	reader, _ := csv.NewReader(src).ReadAll()
+	parseCSVToMemory(reader)
 
 	_, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String("Your_BUCKET_NAME"),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(csvFile.Filename),
-		Body:   csvF,
+		Body:   src,
 	})
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	parseCSVToMemory(csvF)
-
 	// Upload and transcribe OGG files
 	for _, file := range oggFiles {
-		oggF, _ := c.SaveUploadedFile(file, file.Filename)
-		defer oggF.Close()
+		oggSrc, _ := file.Open()
+		defer oggSrc.Close()
 
 		_, err = uploader.Upload(&s3manager.UploadInput{
-			Bucket: aws.String("Your_BUCKET_NAME"),
+			Bucket: aws.String(bucket),
 			Key:    aws.String(file.Filename),
-			Body:   oggF,
+			Body:   oggSrc,
 		})
 
 		if err != nil {
@@ -99,14 +99,7 @@ func uploadAndTranscribe(c *gin.Context, csvFile *multipart.FileHeader, oggFiles
 	saveTestsToFile("output.json")
 }
 
-func parseCSVToMemory(csvFile io.Reader) {
-	reader := csv.NewReader(csvFile)
-
-	lines, err := reader.ReadAll()
-	if err != nil {
-		log.Fatal("Could not read the CSV file", err)
-	}
-
+func parseCSVToMemory(lines [][]string) {
 	tests = Tests{}  // Reset tests
 	for _, line := range lines {
 		tests.Tests = append(tests.Tests, Test{
@@ -131,7 +124,6 @@ func saveTestsToFile(jsonFileName string) {
 	if err != nil {
 		log.Fatal("Could not convert to JSON", err)
 	}
-
 	err = ioutil.WriteFile(jsonFileName, jsonData, 0644)
 	if err != nil {
 		log.Fatal("Could not write the JSON file", err)
