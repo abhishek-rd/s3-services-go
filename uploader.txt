@@ -1,0 +1,120 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        #button{
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+    </style>
+</head>
+<body>
+    <button id="button" onclick="document.getElementById('uploadForm').style.display='block'">Create New Test Suite</button>
+    <div id="uploadForm" style="display: none;">
+        <form id="fileForm">
+            <label>
+                CSV file:
+                <input type="file" id="csvFile" accept=".csv">
+            </label>
+            <br>
+            <label>
+                OGG files:
+                <input type="file" id="oggFiles" accept=".ogg" multiple disabled>
+            </label>
+            <br>
+            <label>
+                Enable OGG file upload:
+                <input type="checkbox" id="oggCheckbox" onchange="document.getElementById('oggFiles').disabled = !this.checked;">
+            </label>
+            <br>
+            <button type="button" onclick="uploadFiles()">Upload</button>
+        </form>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>
+
+
+_____________
+
+// main.js
+function uploadFiles() {
+    const csvFile = document.getElementById('csvFile').files[0];
+    const oggFiles = document.getElementById('oggFiles').files;
+    
+    const formData = new FormData();
+    formData.append('csv', csvFile);
+    for(let i = 0; i < oggFiles.length; i++) {
+        formData.append('oggFiles', oggFiles[i]);
+    }
+    
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error(error));
+}
+
+
+------------
+
+// main.go
+package main
+
+import (
+    "github.com/aws/aws-sdk-go/aws"
+    "github.com/aws/aws-sdk-go/aws/session"
+    "github.com/aws/aws-sdk-go/service/s3/s3manager"
+    "github.com/gin-gonic/gin"
+    "io"
+    "log"
+    "net/http"
+)
+
+func main() {
+    r := gin.Default()
+
+    r.POST("/upload", func(c *gin.Context) {
+        csvFile, _ := c.FormFile("csv")
+        oggFiles, _ := c.FormFile("oggFiles")
+
+        uploadToS3(csvFile)
+        uploadToS3(oggFiles)
+
+        c.JSON(200, gin.H{
+            "message": "Files uploaded to S3",
+        })
+    })
+
+    r.Run()
+}
+
+func uploadToS3(file *multipart.FileHeader) {
+    s, err := session.NewSession(&aws.Config{
+        Region:      aws.String("REGION"),
+        Credentials: credentials.NewStaticCredentials("Your_AWS_ACCESS_KEY", "Your_AWS_SECRET_KEY", ""),
+    })
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    uploader := s3manager.NewUploader(s)
+
+    f, _ := file.Open()
+    defer f.Close()
+
+    _, err = uploader.Upload(&s3manager.UploadInput{
+        Bucket: aws.String("Your_BUCKET_NAME"),
+        Key:    aws.String(file.Filename),
+        Body:   f,
+    })
+
+    if err != nil {
+        log.Fatal(err)
+    }
+}
