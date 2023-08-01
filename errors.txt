@@ -24,3 +24,11 @@ result.proto:121:3: "nuance.rpc.LocalizedMessage" is not defined.
 
 
 c.MultipartForm.File undefined (type func() (*multipart.Form, error) has no field or method File)
+
+
+./main.go:16:2: "strings" imported and not used
+./main.go:39:10: undefined: http
+./main.go:44:9: undefined: http
+./main.go:51:29: undefined: http
+./main.go:74:32: cannot use oggFiles (variable of type []*multipart.FileHeader) as map[string][]*multipart.FileHeader value in argument to uploadAndTranscribe
+./main.go:109:4: undefined: s3
