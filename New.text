@@ -1,72 +1,73 @@
-func transcribeLocalFile(filePath string) string {
-    // Create a new AWS session
-    sess := session.Must(session.NewSession())
+func transcribeLocalFile(file io.Reader) string {
+	sess := session.Must(session.NewSession())
 
-    // Create a client for the Transcribe Streaming service in the desired region
-    client := transcribestreamingservice.New(sess, aws.NewConfig().WithRegion("us-west-2"))
-    lc := "en-US"
-    me := "ogg-opus"
+	client := transcribestreamingservice.New(sess, aws.NewConfig().WithRegion("us-west-2"))
+	lc := "en-US"
+	me := "ogg-opus"
 
-    // Start the stream transcription
-    resp, err := client.StartStreamTranscription(&transcribestreamingservice.StartStreamTranscriptionInput{
-        LanguageCode:         &lc, //aws.String(transcribestreamingservice.LanguageCodeEnUs),
-        MediaEncoding:        &me, //aws.String(transcribestreamingservice.MediaEncodingOggOpus),
-        MediaSampleRateHertz: aws.Int64(16000),
-    })
-    if err != nil {
-        log.Fatalf("failed to start streaming, %v", err)
-    }
+	resp, err := client.StartStreamTranscription(&transcribestreamingservice.StartStreamTranscriptionInput{
+		LanguageCode:         &lc,
+		MediaEncoding:        &me,
+		MediaSampleRateHertz: aws.Int64(16000),
+	})
+	if err != nil {
+		log.Fatalf("failed to start streaming, %v", err)
+	}
 
-    // Get the transcription stream
-    stream := resp.GetStream()
+	stream := resp.GetStream()
+	defer stream.Close()
 
-    // Close the stream when the function exits
-    defer stream.Close()
+	transcribestreamingservice.StreamAudioFromReader(context.Background(), stream.Writer, 10*1024, file)
 
-    // Open the audio file
-    audioFile, err := os.Open(filePath)
-    if err != nil {
-        log.Fatalf("failed to open audio file, %v", err)
-    }
-    defer audioFile.Close()
-
-    // Stream audio from the file to the stream writer
-    transcribestreamingservice.StreamAudioFromReader(context.Background(), stream.Writer, 10*1024, audioFile)
-    var textout string
-    // Process events from the stream
-    for event := range stream.Events() {
-        switch e := event.(type) {
-        case *transcribestreamingservice.TranscriptEvent:
-            for _, res := range e.Transcript.Results {
-                if !*res.IsPartial {
-                    for _, alt := range res.Alternatives {
-                        textout += aws.StringValue(alt.Transcript) + " "
-                    }
-                }
-            }
-        default:
-            log.Fatalf("unexpected event, %T", event)
-        }
-    }
-    log.Printf("Transcribed text: %s", textout)
-    return textout
+	var textout string
+	for event := range stream.Events() {
+		switch e := event.(type) {
+		case *transcribestreamingservice.TranscriptEvent:
+			for _, res := range e.Transcript.Results {
+				if !*res.IsPartial {
+					for _, alt := range res.Alternatives {
+						textout += aws.StringValue(alt.Transcript) + " "
+					}
+				}
+			}
+		default:
+			log.Fatalf("unexpected event, %T", event)
+		}
+	}
+	return textout
 }
 
 
+router.POST("/upload", func(c *gin.Context) {
+	form , _ := c.MultipartForm()
+	csvFile, _ := c.FormFile("csv")
+	oggFiles := form.File["oggFiles"]
 
+	uploadToS3(csvFile)
 
-	router.POST("/upload", func(c *gin.Context) {
-		form , _ := c.MultipartForm()
-		csvFile, _ := c.FormFile("csv")
-		oggFiles := form.File["oggFiles"]
-
-		uploadToS3(csvFile)
-
-		for _, file := range oggFiles {
-			uploadToS3(file)
+	for _, file := range oggFiles {
+		// Open the file
+		openedFile, err := file.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": fmt.Sprintf("error opening file: %v", err),
+			})
+			return
 		}
 
-		c.JSON(200, gin.H{
-			"message": "Files uploaded to S3",
-		})
+		// Transcribe the file
+		transcription := transcribeLocalFile(openedFile)
+		log.Printf("Transcribed text: %s", transcription)
+
+		// Don't forget to close the file
+		if err := openedFile.Close(); err != nil {
+			log.Printf("error closing file: %v", err)
+		}
+
+		uploadToS3(file)
+	}
+
+	c.JSON(200, gin.H{
+		"message": "Files uploaded to S3",
 	})
+})
