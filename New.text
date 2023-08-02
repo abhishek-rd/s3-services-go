@@ -51,3 +51,22 @@ func transcribeLocalFile(filePath string) string {
     log.Printf("Transcribed text: %s", textout)
     return textout
 }
+
+
+
+
+	router.POST("/upload", func(c *gin.Context) {
+		form , _ := c.MultipartForm()
+		csvFile, _ := c.FormFile("csv")
+		oggFiles := form.File["oggFiles"]
+
+		uploadToS3(csvFile)
+
+		for _, file := range oggFiles {
+			uploadToS3(file)
+		}
+
+		c.JSON(200, gin.H{
+			"message": "Files uploaded to S3",
+		})
+	})
