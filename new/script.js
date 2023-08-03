@@ -2,11 +2,24 @@ let expandedRows = {};
 let testCases = [];
 
 window.addEventListener("DOMContentLoaded", () => {
+  const openPopupButton = document.getElementById('open-popup-button');
+  const closePopupButton = document.getElementById('close-popup-button');
+  const form = document.getElementById('new-test-case-form');
+
+  // Event listener for the "Open Popup" button
+  openPopupButton.addEventListener('click', openPopup);
+
+  // Event listener for the "Close Popup" button
+  closePopupButton.addEventListener('click', closePopup);
+
+  // Event listener for form submission
+  form.addEventListener('submit', createTestCase);
+
+  // Fetch the JSON data and populate the table
   fetch("/get-json")
     .then((response) => response.json())
     .then((data) => {
-      testCases = data.testSuites;
-      populateTable(testCases);
+      populateTable(data.testSuites);
     });
 });
 
