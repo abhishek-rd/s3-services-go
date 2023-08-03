@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Suites Data</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/script.js" defer></script>
+</head>
+
+<body>
+    <h1>Test Suites Data</h1>
+    <div class="container">
+        <div class="header">
+            <h2>Test Suites</h2>
+            <button id="add-test-case-button" class="add-button">+</button>
+        </div>
+        <table id="testSuitesTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Description</th>
+                    <th>Pass/Total</th>
+                    <th>Timestamp</th>
+                    <th>Historical</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Table data will be populated by JavaScript -->
+                <tr class="details_row" style="display: none;"></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <span class="close-button">&times;</span>
+            <h2>Create New Test Case</h2>
+            <form id="new-test-case-form">
+                <label for="test-description">Test Description:</label>
+                <input type="text" id="test-description" required>
+                <p>Select an option:</p>
+                <label for="option1">
+                    <input type="radio" id="option1" name="option" value="option1">
+                    Spreadsheet and Audio Files
+                </label>
+                <label for="option2">
+                    <input type="radio" id="option2" name="option" value="option2">
+                    Spreadsheet with binary data
+                </label>
+                <div id="upload-container"></div>
+                <input type="submit" value="Create Test Case">
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>
